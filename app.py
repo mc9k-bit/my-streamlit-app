@@ -1,3 +1,4 @@
+
 import base64
 import json
 import streamlit as st
@@ -94,7 +95,39 @@ if page == "🏠 대시보드":
         st.write(st.session_state.priority_analysis)
         if st.session_state.briefing_audio:
             st.audio(st.session_state.briefing_audio, format="audio/mp3")
-                                  )
+    else:
+        st.info("'회의록 분석' 메뉴에서 자료를 분석해 주세요.")
+
+elif page == "📄 회의록 분석":
+    st.caption("TXT와 회의 자료 이미지를 함께 분석할 수 있습니다. 분석 결과는 다른 페이지에도 유지됩니다.")
+    with st.form("meeting_form"):
+        uploaded_file = st.file_uploader("회의록 TXT 업로드", type=["txt"])
+        image_file = st.file_uploader("회의 자료 이미지 업로드", type=["png", "jpg", "jpeg"])
+        submitted = st.form_submit_button("🔎 회의 자료 분석", use_container_width=True)
+
+    if submitted:
+        text = uploaded_file.getvalue().decode("utf-8-sig") if uploaded_file else ""
+        if not text and image_file is None:
+            st.warning("TXT 파일이나 이미지 중 하나 이상 업로드해 주세요.")
+        else:
+            try:
+                client = get_client()
+                image_analysis = ""
+                with st.spinner("회의 자료를 분석하고 있습니다..."):
+                    if image_file is not None:
+                        mime = image_file.type or "image/png"
+                        image_b64 = base64.b64encode(image_file.getvalue()).decode("utf-8")
+                        vision_response = client.responses.create(
+                            model="gpt-4o-mini",
+                            instructions=(
+                                "회의 자료를 분석하세요. 주요 논의, 결정사항, 업무, 담당자, 마감일을 정리하세요. "
+                                "읽기 어려운 내용은 추측하지 마세요."
+                            ),
+                            input=[{"role": "user", "content": [
+                                {"type": "input_text", "text": "이 회의 자료를 분석해 주세요."},
+                                {"type": "input_image", "image_url": f"data:{mime};base64,{image_b64}"},
+                            ]}],
+                        )
                         image_analysis = vision_response.output_text
                     meeting_analysis = analyze_meeting(client, text, image_analysis)
                     priority_analysis = generate_priorities(client, meeting_analysis)
