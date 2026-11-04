@@ -67,6 +67,28 @@ if submit:
         st.subheader("AI 답변")
         st.write(answer)
 
+        
+        # 회의록 분석 기능
+        if text:
+            meeting_response = client.responses.create(
+                model="gpt-4o-mini",
+                instructions="""
+                당신은 회의록 분석 전문 AI 비서입니다.
+                회의 내용을 요약하고,
+                결정사항과 담당 업무, 마감일을 추출하세요.
+                회의록에 없는 내용은 만들어내지 마세요.
+                반드시 JSON 형식으로 답변하세요.
+                """,
+                input=text,
+                text={"format": {"type": "json_object"}}
+            )
+
+            meeting_data = json.loads(meeting_response.output_text)
+
+            st.subheader("회의록 분석 결과")
+            st.json(meeting_data)
+
+
         # TTS: 텍스트를 음성으로 변환
         speech = client.audio.speech.create(
             model="tts-1",
