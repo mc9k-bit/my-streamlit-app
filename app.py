@@ -24,6 +24,10 @@ if "messages" not in st.session_state:
 # 지시 영역
 with st.form("task_form"):
     uploaded_file = st.file_uploader("텍스트 파일 업로드", type=["txt"])
+        image_file = st.file_uploader(
+        "회의 자료 이미지 업로드",
+        type=["png", "jpg", "jpeg"]
+    )
     audio_value = st.audio_input("무엇을 도와드릴까요?")
     submit = st.form_submit_button("실행")
 
@@ -44,6 +48,47 @@ if submit:
     if text:
         system_content += f"\n\n다음 내용을 참고하세요:\n{text}"
     input_messages = [{"role": "system", "content": system_content}]
+
+    
+    # 이미지 분석 기능
+    image_analysis = ""
+
+    if image_file is not None:
+        image_bytes = image_file.getvalue()
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+
+        mime_type = image_file.type
+
+        vision_response = client.responses.create(
+            model="gpt-4o-mini",
+            instructions="""
+            당신은 회의 자료 분석 전문 AI입니다.
+            이미지에 포함된 텍스트와 주요 내용을 분석하세요.
+            결정사항, 업무, 담당자, 마감일을 구분하세요.
+            읽기 어려운 내용은 추측하지 마세요.
+            """,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": "이 회의 자료 이미지를 분석해 주세요."
+                        },
+                        {
+                            "type": "input_image",
+                            "image_url": f"data:{mime_type};base64,{image_base64}"
+                        }
+                    ]
+                }
+            ]
+        )
+
+        image_analysis = vision_response.output_text
+
+        st.subheader("이미지 분석 결과")
+        st.write(image_analysis)
+
 
     # STT: 음성 → 텍스트
     transcript = client.audio.transcriptions.create(
@@ -81,7 +126,7 @@ if submit:
                 반드시 유효한 JSON 객체만 출력하세요.
                 마크다운 코드 블록은 사용하지 마세요.
                 """,
-                input=text
+                input=f"회의록:\n{text}\n\n이미지 분석 결과:\n{image_analysis}"
             )
 
             st.subheader("회의록 분석 결과")
