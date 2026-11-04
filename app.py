@@ -65,3 +65,13 @@ if submit:
         # 응답 출력
         st.subheader("AI 답변")
         st.write(answer)
+
+# TTS: AI 답변을 음성으로 변환
+speech = client.audio.speech.create(
+    model="tts-1",
+    voice="alloy",
+    input=answer
+)
+
+# Streamlit에서 음성 재생
+st.audio(speech.content, format="audio/mp3")
