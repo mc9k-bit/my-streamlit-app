@@ -53,25 +53,26 @@ if submit:
     # 사용자 메시지
     input_messages.append({"role": "user", "content": transcript.text})
 
-    # LLM 호출 및 응답 듣기
-    with st.spinner("답변을 준비하고 있습니다..."):
-        # LLM 호출
-        response = client.responses.create(
-            model="gpt-4o-mini",
-            input=input_messages
-        )
-        answer = response.output_text
+    
+# LLM 호출 및 응답 듣기
+with st.spinner("답변을 준비하고 있습니다..."):
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        input=input_messages
+    )
+    answer = response.output_text
 
-        # 응답 출력
-        st.subheader("AI 답변")
-        st.write(answer)
+    # AI 텍스트 답변
+    st.subheader("AI 답변")
+    st.write(answer)
 
-# TTS: AI 답변을 음성으로 변환
-speech = client.audio.speech.create(
-    model="tts-1",
-    voice="alloy",
-    input=answer
-)
+    # TTS: 텍스트를 음성으로 변환
+    speech = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input=answer
+    )
 
-# Streamlit에서 음성 재생
-st.audio(speech.content, format="audio/mp3")
+    # 음성 재생
+    st.audio(speech.content, format="audio/mp3")
+
