@@ -1,6 +1,3 @@
-%%writefile app.py
-
-
 """AI 개인비서 에이블: 미션 8 앱에 회의 통합 분석 기능 추가."""
 import csv
 import io
