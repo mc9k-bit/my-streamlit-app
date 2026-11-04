@@ -87,6 +87,46 @@ if submit:
             st.subheader("회의록 분석 결과")
             st.write(meeting_response.output_text)
 
+            
+            # 업무 우선순위 분석
+            priority_response = client.responses.create(
+                model="gpt-4o-mini",
+                instructions="""
+                당신은 업무 일정 관리 전문 AI 비서입니다.
+
+                회의록 분석 결과를 바탕으로 업무 우선순위를 정하세요.
+
+                기준:
+                1. 마감일이 임박한 업무를 우선합니다.
+                2. 중요하다고 강조된 업무를 우선합니다.
+                3. 담당자가 명확한 업무를 구분합니다.
+                4. 마감일이 불명확하면 추측하지 않습니다.
+                5. 오늘 할 일이 확정되지 않았다면
+                   오늘 확인하거나 준비할 업무를 제안합니다.
+
+                우선순위가 높은 순서대로 업무를 정리하고,
+                마지막에 오늘의 업무 브리핑을 작성하세요.
+                """,
+                input=meeting_response.output_text
+            )
+
+            # 우선순위 결과 출력
+            st.subheader("업무 우선순위")
+            st.write(priority_response.output_text)
+
+            # 오늘의 업무 브리핑 음성 생성
+            briefing_speech = client.audio.speech.create(
+                model="tts-1",
+                voice="alloy",
+                input=priority_response.output_text
+            )
+
+            st.subheader("오늘의 업무 브리핑")
+            st.audio(briefing_speech.content, format="audio/mp3")
+
+
+        
+
 
         # TTS: 텍스트를 음성으로 변환
         speech = client.audio.speech.create(
