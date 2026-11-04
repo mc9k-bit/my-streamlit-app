@@ -54,25 +54,27 @@ if submit:
     input_messages.append({"role": "user", "content": transcript.text})
 
     
-# LLM 호출 및 응답 듣기
-with st.spinner("답변을 준비하고 있습니다..."):
-    response = client.responses.create(
-        model="gpt-4o-mini",
-        input=input_messages
-    )
-    answer = response.output_text
 
-    # AI 텍스트 답변
-    st.subheader("AI 답변")
-    st.write(answer)
+    # LLM 호출 및 응답 듣기
+    with st.spinner("답변을 준비하고 있습니다..."):
+        response = client.responses.create(
+            model="gpt-4o-mini",
+            input=input_messages
+        )
+        answer = response.output_text
 
-    # TTS: 텍스트를 음성으로 변환
-    speech = client.audio.speech.create(
-        model="tts-1",
-        voice="alloy",
-        input=answer
-    )
+        # AI 텍스트 답변
+        st.subheader("AI 답변")
+        st.write(answer)
 
-    # 음성 재생
-    st.audio(speech.content, format="audio/mp3")
+        # TTS: 텍스트를 음성으로 변환
+        speech = client.audio.speech.create(
+            model="tts-1",
+            voice="alloy",
+            input=answer
+        )
+
+        # 음성 재생
+        st.audio(speech.content, format="audio/mp3")
+
 
