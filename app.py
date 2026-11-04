@@ -1,4 +1,100 @@
-                        )
+import base64
+import json
+import streamlit as st
+from openai import OpenAI
+
+st.set_page_config(page_title="AIVLE | AI 업무 비서", page_icon="🤖", layout="wide")
+
+SYS_ROLE = """당신은 AIVLE, 친절하고 정확한 한국어 AI 업무 비서입니다.
+제공된 회의 자료를 우선 근거로 답하세요. 자료에 없는 정보는 추측하지 마세요.
+회의 자료가 제공되지 않았을 때만 자료가 없다고 안내하세요."""
+
+DEFAULTS = {
+    "meeting_text": "",
+    "image_analysis": "",
+    "meeting_analysis": "",
+    "priority_analysis": "",
+    "assistant_answer": "",
+    "assistant_audio": None,
+    "briefing_audio": None,
+    "messages": [],
+}
+for key, default in DEFAULTS.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+@st.cache_resource
+def get_client():
+    return OpenAI()
+
+
+def analyze_meeting(client, text, image_analysis):
+    source = f"[회의록 TXT]\n{text}\n\n[이미지 분석]\n{image_analysis}"
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        instructions=(
+            "당신은 회의록 분석 전문 AI 비서입니다. 주요 논의, 결정사항, 업무, 담당자, 마감일을 정리하세요. "
+            "자료에 없는 내용은 만들지 마세요. 읽기 어려운 내용은 추측하지 마세요. "
+            "반드시 유효한 JSON 객체만 출력하고 마크다운 코드 블록은 사용하지 마세요. "
+            "가능하면 주요_논의, 결정사항, 업무_목록, 다음_안건 키를 사용하세요."
+        ),
+        input=source,
+    )
+    return response.output_text
+
+
+def generate_priorities(client, meeting_analysis):
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        instructions=(
+            "당신은 업무 일정 관리 AI 비서입니다. 마감일과 중요도에 따라 업무를 우선순위로 정리하세요. "
+            "담당자를 명시하고 마감일이 불명확하면 추측하지 마세요. "
+            "끝에 '오늘의 업무 브리핑'을 짧게 작성하세요."
+        ),
+        input=meeting_analysis,
+    )
+    return response.output_text
+
+
+def make_speech(client, text):
+    speech = client.audio.speech.create(model="tts-1", voice="alloy", input=text[:4000])
+    return speech.content
+
+
+def show_json_or_text(value):
+    try:
+        st.json(json.loads(value))
+    except (ValueError, TypeError):
+        st.write(value)
+
+
+with st.sidebar:
+    st.title("🤖 AIVLE")
+    st.caption("Your AI Work Assistant")
+    page = st.radio(
+        "메뉴",
+        ["🏠 대시보드", "💬 AI 비서", "📄 회의록 분석", "📋 업무 관리", "⚙️ 설정"],
+    )
+    st.divider()
+    if st.session_state.meeting_analysis:
+        st.success("회의 분석 자료 연결됨")
+    else:
+        st.info("회의록을 분석하면 AI 비서와 연결됩니다.")
+
+st.title(page.split(" ", 1)[1])
+
+if page == "🏠 대시보드":
+    st.caption("회의 분석부터 업무 브리핑까지 한곳에서 확인하세요.")
+    a, b, c = st.columns(3)
+    a.metric("회의록 분석", "완료" if st.session_state.meeting_analysis else "대기")
+    b.metric("이미지 분석", "완료" if st.session_state.image_analysis else "대기")
+    c.metric("업무 우선순위", "완료" if st.session_state.priority_analysis else "대기")
+    st.subheader("오늘의 업무 브리핑")
+    if st.session_state.priority_analysis:
+        st.write(st.session_state.priority_analysis)
+        if st.session_state.briefing_audio:
+            st.audio(st.session_state.briefing_audio, format="audio/mp3")
+                                  )
                         image_analysis = vision_response.output_text
                     meeting_analysis = analyze_meeting(client, text, image_analysis)
                     priority_analysis = generate_priorities(client, meeting_analysis)
